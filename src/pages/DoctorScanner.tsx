@@ -1,43 +1,62 @@
-import { useState } from 'react';
-import { QrReader } from 'react-qr-reader';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const DoctorScanner = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [scanned, setScanned] = useState(false);
 
-  const handleResult = (result: any, error: any) => {
-    if (result && !scanned) {
-      const text = result?.text;
-      if (text) {
+  useEffect(() => {
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader",
+      { fps: 10, qrbox: { width: 250, height: 250 }, disableFlip: false },
+      false
+    );
+
+    const onScanSuccess = (decodedText: string, decodedResult: any) => {
+      if (!scanned) {
         setScanned(true);
-        // Parse URL to get reportId
-        // Expected format: .../doctor/review/{reportId}
-        // We look for the last occurrence of /doctor/review/
-        if (text.includes('/doctor/review/')) {
-          const parts = text.split('/doctor/review/');
-          const reportId = parts[parts.length - 1];
-          
+        if (decodedText.includes('/doctor/review/')) {
+          const url = new URL(decodedText);
+          const reportId = url.pathname.split('/').pop();
+          const fileKey = url.searchParams.get('key');
+
           toast({
             title: "QR Code Detected",
             description: "Redirecting to report review...",
           });
           
           setTimeout(() => {
-             navigate(`/doctor/review/${reportId}`);
+             navigate(`/doctor/review/${reportId}${fileKey ? `?key=${encodeURIComponent(fileKey)}` : ''}`);
           }, 500);
         } else {
-          // Debounce error toast or just log
-          console.warn("Invalid QR content:", text);
+          console.warn("Invalid QR content:", decodedText);
+          toast({
+            title: "Invalid QR Code",
+            description: "The scanned QR code does not contain a valid report link.",
+            variant: "destructive"
+          });
+          setScanned(false);
         }
+        html5QrcodeScanner.clear().catch(error => console.error("Failed to clear html5QrcodeScanner", error));
       }
-    }
-  };
+    };
+
+    const onScanError = (errorMessage: string) => {
+      // console.warn(errorMessage);
+    };
+
+    html5QrcodeScanner.render(onScanSuccess, onScanError);
+
+    return () => {
+      html5QrcodeScanner.clear().catch(error => console.error("Failed to clear html5QrcodeScanner on unmount", error));
+    };
+  }, [navigate, toast, scanned]);
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 relative">
@@ -57,13 +76,7 @@ const DoctorScanner = () => {
 
         <Card className="overflow-hidden border-0 shadow-2xl relative aspect-square bg-black rounded-3xl">
            <div className="w-full h-full relative">
-             <QrReader
-                onResult={handleResult}
-                constraints={{ facingMode: 'environment' }}
-                containerStyle={{ width: '100%', height: '100%', paddingTop: 0 }}
-                videoContainerStyle={{ paddingTop: 0 }}
-                videoStyle={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }}
-             />
+             <div id="reader" style={{ width: '100%', height: '100%' }}></div>
            </div>
            
            {/* Overlay */}
