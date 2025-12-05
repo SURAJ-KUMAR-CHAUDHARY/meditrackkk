@@ -1,26 +1,79 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, RefreshCw, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { mockMedicalEvents, generateAISummary } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
+import { generateMedicalSummary, isGeminiConfigured, MedicalRecord } from '@/services/gemini-ai.service';
 
 export const AISummary = () => {
-  const [summary, setSummary] = useState(generateAISummary(mockMedicalEvents));
+  const [summary, setSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [useGemini, setUseGemini] = useState(false);
   const { toast } = useToast();
 
-  const regenerateSummary = async () => {
+  useEffect(() => {
+    // Check if Gemini is configured and load initial summary
+    const isConfigured = isGeminiConfigured();
+    setUseGemini(isConfigured);
+    
+    if (isConfigured) {
+      loadGeminiSummary();
+    } else {
+      // Use mock data if Gemini not configured
+      setSummary(generateAISummary(mockMedicalEvents));
+    }
+  }, []);
+
+  const loadGeminiSummary = async () => {
     setIsGenerating(true);
-    // Simulate AI generation delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setSummary(generateAISummary(mockMedicalEvents));
-    setIsGenerating(false);
-    toast({
-      title: 'Summary Updated',
-      description: 'Your AI health summary has been regenerated.',
-    });
+    try {
+      // Convert mock data to MedicalRecord format
+      const records: MedicalRecord[] = mockMedicalEvents.map(event => ({
+        date: event.date,
+        type: event.type,
+        title: event.title,
+        description: event.description,
+        provider: event.doctor, // Map from 'doctor' property
+        medications: [], // No direct medication field in mock data, could derive from prescriptions
+        diagnosis: [], // No diagnosis field in mock data
+        notes: event.description, // Use description as notes
+      }));
+
+      const geminiSummary = await generateMedicalSummary(records);
+      setSummary(geminiSummary);
+      
+      toast({
+        title: 'Summary Generated',
+        description: 'AI health summary powered by Gemini 2.5 Flash',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate AI summary. Using fallback.',
+        variant: 'destructive',
+      });
+      // Fallback to mock data
+      setSummary(generateAISummary(mockMedicalEvents));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const regenerateSummary = async () => {
+    if (useGemini) {
+      await loadGeminiSummary();
+    } else {
+      setIsGenerating(true);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setSummary(generateAISummary(mockMedicalEvents));
+      setIsGenerating(false);
+      toast({
+        title: 'Summary Updated',
+        description: 'Your AI health summary has been regenerated.',
+      });
+    }
   };
 
   const copySummary = () => {
@@ -71,7 +124,9 @@ export const AISummary = () => {
           </div>
           <div>
             <h2 className="text-xl font-semibold">AI Health Summary</h2>
-            <p className="text-muted-foreground">Powered by advanced medical AI</p>
+            <p className="text-muted-foreground">
+              {useGemini ? 'Powered by Gemini 2.5 Flash' : 'Powered by advanced medical AI'}
+            </p>
           </div>
         </div>
         

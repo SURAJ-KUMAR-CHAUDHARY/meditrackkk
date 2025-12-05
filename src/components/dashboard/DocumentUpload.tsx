@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { uploadFileToS3, isAWSConfigured } from '@/services/aws-s3.service';
 
 interface UploadedFile {
   id: string;
@@ -37,6 +38,8 @@ interface UploadedFile {
   size: number;
   preview?: string;
   status: 'uploading' | 'complete' | 'error';
+  fileUrl?: string;
+  fileKey?: string;
 }
 
 const documentTypes = [
@@ -67,8 +70,17 @@ export const DocumentUpload = () => {
     setIsDragging(false);
   }, []);
 
-  const processFiles = (fileList: FileList | null) => {
+  const processFiles = async (fileList: FileList | null) => {
     if (!fileList) return;
+
+    if (!documentType) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please select a document type before uploading.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     const newFiles: UploadedFile[] = Array.from(fileList).map(file => ({
       id: Math.random().toString(36).substr(2, 9),
@@ -81,25 +93,61 @@ export const DocumentUpload = () => {
 
     setFiles(prev => [...prev, ...newFiles]);
 
-    // Simulate upload progress
-    newFiles.forEach(file => {
-      setTimeout(() => {
+    // Upload files to AWS S3
+    const fileArray = Array.from(fileList);
+    
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const uploadedFileRef = newFiles[i];
+
+      try {
+        if (isAWSConfigured()) {
+          // Upload to AWS S3
+          const userId = 'patient-' + Math.random().toString(36).substr(2, 9); // In real app, use actual user ID
+          const result = await uploadFileToS3(file, userId, documentType);
+          
+          setFiles(prev => prev.map(f => 
+            f.id === uploadedFileRef.id 
+              ? { ...f, status: 'complete', fileUrl: result.fileUrl, fileKey: result.fileKey } 
+              : f
+          ));
+          
+          toast({
+            title: 'File Uploaded to AWS',
+            description: `${file.name} has been uploaded successfully to S3.`,
+          });
+        } else {
+          // Fallback: simulate upload (for development without AWS)
+          await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+          
+          setFiles(prev => prev.map(f => 
+            f.id === uploadedFileRef.id ? { ...f, status: 'complete' } : f
+          ));
+          
+          toast({
+            title: 'File Uploaded (Mock)',
+            description: `${file.name} uploaded. Configure AWS for real uploads.`,
+          });
+        }
+      } catch (error) {
         setFiles(prev => prev.map(f => 
-          f.id === file.id ? { ...f, status: 'complete' } : f
+          f.id === uploadedFileRef.id ? { ...f, status: 'error' } : f
         ));
+        
         toast({
-          title: 'File Uploaded',
-          description: `${file.name} has been uploaded successfully.`,
+          title: 'Upload Failed',
+          description: error instanceof Error ? error.message : `Failed to upload ${file.name}`,
+          variant: 'destructive',
         });
-      }, 1500 + Math.random() * 1000);
-    });
+      }
+    }
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     processFiles(e.dataTransfer.files);
-  }, []);
+  }, [documentType]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     processFiles(e.target.files);
@@ -322,6 +370,11 @@ export const DocumentUpload = () => {
                     {file.status === 'complete' && (
                       <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
                         <Check className="w-4 h-4 text-green-500" />
+                      </div>
+                    )}
+                    {file.status === 'error' && (
+                      <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center">
+                        <X className="w-4 h-4 text-red-500" />
                       </div>
                     )}
                     <button
