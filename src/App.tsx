@@ -10,6 +10,8 @@ import PatientAccess from "./pages/PatientAccess";
 import PatientAISummary from "./pages/PatientAISummary";
 import PatientUpload from "./pages/PatientUpload";
 import DoctorDashboard from "./pages/DoctorDashboard";
+import DoctorScanner from "./pages/DoctorScanner";
+import DoctorReview from "./pages/DoctorReview";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +32,8 @@ const App = () => (
           <Route path="/patient/ai-summary" element={<PatientAISummary />} />
           <Route path="/patient/settings" element={<PatientDashboard />} />
           <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+          <Route path="/doctor/scan" element={<DoctorScanner />} />
+          <Route path="/doctor/review/:reportId" element={<DoctorReview />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

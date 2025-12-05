@@ -30,6 +30,27 @@ export const uploadFileToS3 = async (
   documentType: string
 ): Promise<UploadResult> => {
   try {
+    // Check if AWS credentials are provided
+    if (!import.meta.env.VITE_AWS_ACCESS_KEY_ID || !import.meta.env.VITE_AWS_SECRET_ACCESS_KEY) {
+      console.warn('AWS Credentials missing, using mock upload');
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substring(2, 15);
+          const fileExtension = file.name.split('.').pop();
+          const fileKey = `mock/medical-records/${userId}/${documentType}/${timestamp}-${randomString}.${fileExtension}`;
+          
+          resolve({
+            fileUrl: `https://mock-s3-bucket.s3.amazonaws.com/${fileKey}`,
+            fileKey: fileKey,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+          });
+        }, 2000); // Mock 2s delay
+      });
+    }
+
     // Generate unique file key
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);

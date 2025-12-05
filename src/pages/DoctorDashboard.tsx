@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, User, Heart, AlertTriangle, Pill, Activity, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
+import { Search, User, Heart, AlertTriangle, Pill, Activity, ChevronDown, ChevronUp, LogOut, ScanLine } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { NavLink } from '@/components/NavLink';
 import { mockPatientsList, Patient } from '@/data/mockData';
@@ -33,7 +33,15 @@ const DoctorDashboard = () => {
         </div>
         
         {/* Search */}
-        <div className="p-4">
+        <div className="p-4 space-y-4">
+          <NavLink
+            to="/doctor/scan"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
+          >
+            <ScanLine className="w-5 h-5" />
+            <span className="font-medium">Scan Patient QR</span>
+          </NavLink>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
