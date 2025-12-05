@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import PatientDashboard from "./pages/PatientDashboard";
 import PatientAccess from "./pages/PatientAccess";
 import PatientAISummary from "./pages/PatientAISummary";
+import PatientUpload from "./pages/PatientUpload";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -24,7 +25,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/patient/dashboard" element={<PatientDashboard />} />
           <Route path="/patient/timeline" element={<PatientDashboard />} />
-          <Route path="/patient/upload" element={<PatientDashboard />} />
+          <Route path="/patient/upload" element={<PatientUpload />} />
           <Route path="/patient/access" element={<PatientAccess />} />
           <Route path="/patient/ai-summary" element={<PatientAISummary />} />
           <Route path="/patient/settings" element={<PatientDashboard />} />

@@ -20,6 +20,14 @@ export interface Patient {
   avatar?: string;
 }
 
+export interface AccessPermission {
+  viewHistory: boolean;
+  viewPrescriptions: boolean;
+  viewReports: boolean;
+  addRecords: boolean;
+  shareWithOthers: boolean;
+}
+
 export interface Doctor {
   id: string;
   name: string;
@@ -27,6 +35,8 @@ export interface Doctor {
   hospital: string;
   accessGranted: boolean;
   accessExpiry?: string;
+  permissions: AccessPermission;
+  lastAccessed?: string;
 }
 
 export const mockMedicalEvents: MedicalEvent[] = [
@@ -99,6 +109,14 @@ export const mockPatient: Patient = {
   recentConditions: ['Hypertension', 'Seasonal Allergies'],
 };
 
+export const defaultPermissions: AccessPermission = {
+  viewHistory: true,
+  viewPrescriptions: true,
+  viewReports: true,
+  addRecords: false,
+  shareWithOthers: false,
+};
+
 export const mockDoctors: Doctor[] = [
   {
     id: 'd1',
@@ -107,6 +125,8 @@ export const mockDoctors: Doctor[] = [
     hospital: 'City General Hospital',
     accessGranted: true,
     accessExpiry: '2025-01-15',
+    permissions: { ...defaultPermissions, addRecords: true },
+    lastAccessed: '2024-12-03',
   },
   {
     id: 'd2',
@@ -115,6 +135,8 @@ export const mockDoctors: Doctor[] = [
     hospital: 'Heart Care Clinic',
     accessGranted: true,
     accessExpiry: '2024-12-31',
+    permissions: { ...defaultPermissions },
+    lastAccessed: '2024-11-28',
   },
   {
     id: 'd3',
@@ -122,6 +144,7 @@ export const mockDoctors: Doctor[] = [
     specialization: 'Immunologist',
     hospital: 'Community Health Center',
     accessGranted: false,
+    permissions: { ...defaultPermissions },
   },
   {
     id: 'd4',
@@ -129,6 +152,7 @@ export const mockDoctors: Doctor[] = [
     specialization: 'General Surgeon',
     hospital: 'University Medical Center',
     accessGranted: false,
+    permissions: { ...defaultPermissions },
   },
 ];
 
