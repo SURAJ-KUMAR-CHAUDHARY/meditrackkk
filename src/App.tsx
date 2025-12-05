@@ -12,6 +12,7 @@ import PatientUpload from "./pages/PatientUpload";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import DoctorScanner from "./pages/DoctorScanner";
 import DoctorReview from "./pages/DoctorReview";
+import TestUpload from "./pages/TestUpload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,7 +22,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
           <Route path="/doctor/scan" element={<DoctorScanner />} />
           <Route path="/doctor/review/:reportId" element={<DoctorReview />} />
+          <Route path="/test-upload" element={<TestUpload />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

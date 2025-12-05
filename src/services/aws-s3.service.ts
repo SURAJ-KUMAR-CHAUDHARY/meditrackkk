@@ -22,6 +22,35 @@ export interface UploadResult {
 }
 
 /**
+ * Low-level function to upload a file with a specific key
+ */
+export const uploadRawFileToS3 = async (
+  file: File,
+  key: string
+) => {
+  try {
+    // 1. Convert File to ArrayBuffer to avoid "getReader" stream errors
+    const fileBuffer = await file.arrayBuffer();
+
+    const uploadParams = {
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Body: new Uint8Array(fileBuffer),
+      ContentType: file.type,
+      ContentLength: file.size,
+    };
+
+    const command = new PutObjectCommand(uploadParams);
+    const response = await s3Client.send(command);
+    console.log("✅ Upload successful:", response);
+    return response;
+  } catch (error) {
+    console.error("❌ Upload failed:", error);
+    throw error;
+  }
+};
+
+/**
  * Upload a file to AWS S3
  */
 export const uploadFileToS3 = async (
@@ -57,23 +86,8 @@ export const uploadFileToS3 = async (
     const fileExtension = file.name.split('.').pop();
     const fileKey = `medical-records/${userId}/${documentType}/${timestamp}-${randomString}.${fileExtension}`;
 
-    // Prepare upload parameters
-    const uploadParams = {
-      Bucket: BUCKET_NAME,
-      Key: fileKey,
-      Body: file,
-      ContentType: file.type,
-      Metadata: {
-        originalName: file.name,
-        uploadDate: new Date().toISOString(),
-        documentType: documentType,
-        userId: userId,
-      },
-    };
-
-    // Upload to S3
-    const command = new PutObjectCommand(uploadParams);
-    await s3Client.send(command);
+    // Use the low-level upload function
+    await uploadRawFileToS3(file, fileKey);
 
     // Generate the file URL
     const fileUrl = `https://${BUCKET_NAME}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${fileKey}`;

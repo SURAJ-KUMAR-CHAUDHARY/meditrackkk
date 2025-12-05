@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Save, ArrowLeft, FileText, User, Calendar, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,25 +9,52 @@ import { useToast } from '@/hooks/use-toast';
 import { mockPatient } from '@/data/mockData';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { generatePresignedUrl } from '@/services/aws-s3.service';
 
 // Set worker from CDN to avoid build issues
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const DoctorReview = () => {
   const { reportId } = useParams();
+  const [searchParams] = useSearchParams();
+  const fileKey = searchParams.get('key');
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUrl = async () => {
+      if (fileKey && !fileKey.startsWith('mock-')) {
+        try {
+          const url = await generatePresignedUrl(fileKey);
+          setDocumentUrl(url);
+        } catch (error) {
+          console.error("Failed to generate URL", error);
+          toast({
+            title: "Error loading document",
+            description: "Could not retrieve the file from secure storage.",
+            variant: "destructive"
+          });
+        }
+      } else {
+          // Fallback to mock data if no key provided or if it's a mock key
+          // In a real mock scenario, we might use a blob URL if passed, but for cross-device demo we use a static PDF
+          setDocumentUrl("https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/examples/learning/helloworld.pdf");
+      }
+    };
+    fetchUrl();
+  }, [fileKey, toast]);
 
   // Mock data - in real app fetch by reportId
   const reportData = {
     patientName: mockPatient.name,
     date: new Date().toLocaleDateString(),
     type: "Lab Report",
-    // Using a sample PDF for demo
-    url: "https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/examples/learning/helloworld.pdf" 
+    url: documentUrl
   };
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
@@ -91,31 +118,38 @@ const DoctorReview = () => {
             <ResizablePanel defaultSize={60} minSize={30}>
                 <div className="h-full bg-slate-100 p-4 overflow-auto flex justify-center">
                      <div className="shadow-lg">
-                        <Document
-                            file={reportData.url}
-                            onLoadSuccess={onDocumentLoadSuccess}
-                            loading={
-                                <div className="flex items-center justify-center h-96">
-                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                                </div>
-                            }
-                            error={
-                                <div className="flex items-center justify-center h-96 bg-white p-8 text-destructive">
-                                    Failed to load document. (CORS or Network Error)
-                                </div>
-                            }
-                        >
-                            {Array.from(new Array(numPages), (el, index) => (
-                                <Page 
-                                    key={`page_${index + 1}`} 
-                                    pageNumber={index + 1} 
-                                    renderTextLayer={false}
-                                    renderAnnotationLayer={false}
-                                    className="mb-4"
-                                    width={600}
-                                />
-                            ))}
-                        </Document>
+                        {reportData.url ? (
+                            <Document
+                                file={reportData.url}
+                                onLoadSuccess={onDocumentLoadSuccess}
+                                loading={
+                                    <div className="flex items-center justify-center h-96">
+                                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                    </div>
+                                }
+                                error={
+                                    <div className="flex items-center justify-center h-96 bg-white p-8 text-destructive">
+                                        Failed to load document. (CORS or Network Error)
+                                    </div>
+                                }
+                            >
+                                {Array.from(new Array(numPages), (el, index) => (
+                                    <Page 
+                                        key={`page_${index + 1}`} 
+                                        pageNumber={index + 1} 
+                                        renderTextLayer={false}
+                                        renderAnnotationLayer={false}
+                                        className="mb-4"
+                                        width={600}
+                                    />
+                                ))}
+                            </Document>
+                        ) : (
+                            <div className="flex items-center justify-center h-96">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                <span className="ml-2 text-muted-foreground">Retrieving secure document...</span>
+                            </div>
+                        )}
                      </div>
                 </div>
             </ResizablePanel>

@@ -4,7 +4,7 @@ import { Upload, FileText, Check, Share2, Download, Loader2 } from 'lucide-react
 import QRCode from 'react-qr-code';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { uploadFileToS3 } from '@/services/aws-s3.service';
+import { uploadFileToMockS3 } from '@/services/mock-storage.service';
 import { mockPatient } from '@/data/mockData';
 import { PatientSidebar } from '@/components/dashboard/PatientSidebar';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +15,7 @@ const PatientUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadComplete, setUploadComplete] = useState(false);
   const [reportId, setReportId] = useState<string | null>(null);
+  const [uploadedFileKey, setUploadedFileKey] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -53,11 +54,14 @@ const PatientUpload = () => {
     setUploading(true);
     try {
       // Mock S3 upload or real if configured
-      await uploadFileToS3(fileToUpload, mockPatient.id, 'report');
+      const result = await uploadFileToMockS3(fileToUpload);
       
       // Generate unique ID
       const newReportId = crypto.randomUUID();
       setReportId(newReportId);
+      
+      // Store the fileKey to be used in the QR code
+      setUploadedFileKey(result.key);
       
       // Simulate a small delay for better UX if upload was too fast
       setTimeout(() => {
@@ -80,7 +84,9 @@ const PatientUpload = () => {
     }
   };
 
-  const reviewUrl = reportId ? `${window.location.origin}/doctor/review/${reportId}` : '';
+  const reviewUrl = reportId 
+    ? `${window.location.origin}/doctor/review/${reportId}${uploadedFileKey ? `?key=${encodeURIComponent(uploadedFileKey)}` : ''}` 
+    : '';
 
   return (
     <div className="flex min-h-screen bg-background">
