@@ -1,6 +1,7 @@
 # Meditrack
 
 Meditrack is a comprehensive medical record management system designed to bridge the gap between patients and doctors. This project features the **MediTrack QR Module**, a seamless workflow allowing patients to securely upload medical reports and doctors to instantly review them via QR code scanning.
+
 Website link -https://meditrackkkk.netlify.app/
 ## 🚀 Key Features
 
